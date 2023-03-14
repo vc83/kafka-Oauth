@@ -1,0 +1,20 @@
+// before running following commands please set or check path is set to correct kafka setup directory in bashrc/zshrc
+
+kafka-console-producer.sh --topic saslplain --producer.config config/producer.properties --broker-list localhost:9093
+kafka-console-consumer.sh --topic saslplain --from-beginning --consumer.config config/consumer.properties --bootstrap-server localhost:9093
+kafka-topics.sh --topic ssl --delete --bootstrap-server localhost:9093 -command-config config/kafka-client.properties
+kafka-topics.sh --topic saslplain --describe --bootstrap-server localhost:9093 -command-config config/kafka-client.properties
+kafka-topics.sh --list --bootstrap-server localhost:9093 --command-config config/kafka-client.properties
+kafka-topics.sh --create --topic saslplain --partitions 1 --replication-factor 1 --bootstrap-server localhost:9093 --command-config config/kafka-client.properties  
+
+
+#giving permissions for producers -> write.describe,describeconfig  & consumer -> read, describe  
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --add --allow-principal User:alice --operation WRITE --operation DESCRIBE --operation DESCRIBECONFIGS --topic saslplain
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --add --allow-principal User:alice --operation READ --operation DESCRIBE --topic saslplain
+
+#list privilege 
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --list --topic saslplain
+
+#extra group permission for kafka consumer is required 
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --add --allow-principal User:alice operation READ --group saslplain-consumer-grp
+kafka-consumer-groups.sh  --list --bootstrap-server localhost:9093 --command-config config/kafka-client.properties

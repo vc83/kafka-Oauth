@@ -1,0 +1,39 @@
+// before running following commands please set or check path is set to correct kafka setup directory in bashrc/zshrc
+
+zookeeper-server-start.sh -daemon config/zookeeper.properties
+
+zookeeper-shell.sh localhost:2182 -zk-tls-config-file config/zookeeper-client.properties 
+kafka-server-start.sh -daemon config/server0.properties 
+
+ls /brokers/ids                                       (to check running brokers)
+kafka-topics.sh --list --bootstrap-server localhost:9092 --command-config config/kafka-client.properties
+kafka-topics.sh --create --topic sasl --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092 --command-config config/kafka-client.properties  
+kafka-topics.sh --topic sasl --describe --bootstrap-server localhost:9092 --command-config config/kafka-client.properties  
+
+kafka-console-producer.sh --topic sasl --producer.config config/producer.properties --broker-list localhost:9092
+kafka-console-consumer.sh --topic sasl --from-beginning --consumer.config config/consumer.properties --bootstrap-server localhost:9092
+
+#SASL commands:::
+kafka-configs.sh --zookeeper localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --entity-type users --entity-name admin --alter --add-config 'SCRAM-SHA-512=[password=admin1]'
+
+#creating producer and consumer
+kafka-configs.sh --zookeeper localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --entity-type users --entity-name sasl-producer --alter --add-config 'SCRAM-SHA-512=[password=admin1]'
+kafka-configs.sh --zookeeper localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --entity-type users --entity-name sasl-consumer --alter --add-config 'SCRAM-SHA-512=[password=admin1]'
+
+#giving permissions for producers -> write.describe,describeconfig  & consumer -> read, describe  
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --add --allow-principal User:sasl-producer --operation WRITE --operation DESCRIBE --operation DESCRIBECONFIGS --topic sasl
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --add --allow-principal User:sasl-consumer --operation READ --operation DESCRIBE --topic sasl
+
+#list privilege 
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --list --topic sasl
+
+#extra group permission for kafka consumer is required 
+kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2182 --zk-tls-config-file config/zookeeper-client.properties --add --allow-principal User:sasl-consumer operation READ --group sasl-consumer-grp
+kafka-consumer-groups.sh  --list --bootstrap-server localhost:9092 --command-config config/kafka-client.properties
+
+#commands for plain sasl config
+export KAFKA_OPTS=-Djava.security.auth.login.config=/home/vishwesh/kafka/kafka/ssl/kafka_server.jaas.conf
+kafka-server-start.sh -daemon config/server1.properties
+
+
+kafka-topics.sh --topic saslplain --delete --bootstrap-server localhost:9092 --command-config config/kafka-client.properties                
