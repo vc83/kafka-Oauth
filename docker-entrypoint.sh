@@ -15,15 +15,11 @@ function fail_by_rc {
 }
 
 
-echo "producer id : " ${ProducerClientId}
-# ls -a 
-
 fail_by_rc ./createCerts.sh
 fail_by_rc /kafka/bin/zookeeper-server-start.sh -daemon /kafka/config/zookeeper.properties
 sleep 2
 fail_by_rc /kafka/bin/kafka-server-start.sh -daemon  /kafka/config/server.properties 
 sleep 2
-#fail_by_rc /kafka/bin/kafka-topics.sh --create --topic test --partitions 1 --replication-factor 1 --bootstrap-server localhost:9092 --command-config /kafka/config/kafka-client.properties 
 
 #  give create and write permission to producer
 fail_by_rc /kafka/bin/kafka-acls.sh --authorizer-properties zookeeper.connect=localhost:2181 --zk-tls-config-file /kafka/config/zookeeper-client.properties --add --allow-principal User:$ProducerClientId --operation Create --operation WRITE --operation Describe  --topic test
